@@ -1,0 +1,332 @@
+<apex:page controller="ExcelSheet" standardStylesheets="false" sidebar="false" applyHtmlTag="true" showHeader="true" id="pageId" docType="html-5.0">
+    
+<html>   
+<head>
+
+<apex:includeLightning /> 
+<apex:slds />
+
+<apex:stylesheet value="{!URLFOR($Resource.HTable, 'handsontable.full.min.css')}"/>
+<apex:stylesheet value="{!URLFOR($Resource.HTable, 'main.css')}"/>
+<apex:includeScript value="{!URLFOR($Resource.HTable, 'handsontable.full.min.js')}"/>
+
+<apex:stylesheet value="{!URLFOR($Resource.HTable,'/jquery-ui.css')}"/>
+<apex:includeScript value="{!URLFOR($Resource.HTable,'/jquery-1.12.4.js')}"/>
+<apex:includeScript value="{!URLFOR($Resource.HTable,'/jquery-ui.js')}"/>
+ 
+ 
+</head>
+
+<style type="text/css">
+  
+  
+  .handsontable .myClass {
+    background-color: #ccc !important;
+  }
+
+
+</style>
+
+
+<body>
+<apex:form id="formId">  
+
+<div class="slds-scope slds-m-bottom_x-large"> 
+    
+    <div class="slds-page-header slds-m-bottom_x-small">
+      <div class="slds-grid">
+        <div class="slds-col slds-has-flexi-truncate">
+          <div class="slds-media slds-no-space slds-grow">
+            <div class="slds-media__body">
+              <h1 class="slds-page-header__title slds-p-right_x-small">
+                <button class="slds-button slds-button_reset slds-type-focus slds-truncate" aria-haspopup="true" title="">
+                  <span class="slds-grid slds-has-flexi-truncate slds-grid_vertical-align-center">
+                    <span class="slds-truncate" title="Recently Viewed">POR</span>
+                  </span>
+                </button>
+              </h1>
+            </div>
+          </div>
+        </div>
+        <div class="slds-col slds-no-flex slds-grid slds-align-top slds-p-bottom_xx-small" >
+          <div class="slds-button-group" role="group">
+            
+            <apex:outputPanel id="sheetButtons">
+            
+            <apex:commandButton styleClass="slds-button slds-button_neutral" rendered="{!createPORTemplateBtn}" value="Create" action="{!createPORTemplate}" />
+            <apex:commandButton styleClass="slds-button slds-button_neutral" value="Save" rendered="{!savePORTemplateBtn}" reRender="sheetAndTable" action="{!upsertTempItems}" status="status"/>
+            <apex:commandButton styleClass="slds-button slds-button_neutral" value="Edit" rendered="{!editPORTemplateBtn}" action="{!editPORTTemplate}"  status="status"/>
+            <apex:commandButton styleClass="slds-button slds-button_neutral" value="Delete" rendered="{!deletePORTemplateBtn}" reRender="sheetAndTable" action="{!deletePORTemplate}"  status="status"/>
+            <apex:commandButton styleClass="slds-button slds-button_neutral" value="New Version" rendered="{!newVersionPORTempBtn}" reRender="sheetAndTable" action="{!createPORTemplate}"  status="status"/>
+            
+            </apex:outputPanel>
+            
+          </div>
+        </div>
+      </div>
+    </div>
+
+    
+    <div class="slds-grid slds-wrap slds-grid--pull-padded" id="searchForm" style="padding-top: 10px;padding-left: 15px;width: 100%;">
+        
+       <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-3" style="padding-right: 0px;">
+          <label class="slds-form-element__label label" for="text-input-01">POR Name</label>
+          <div class="slds-form-element__control">
+            <apex:inputText styleClass="slds-input" rendered="{!inputView}" value="{!finalExcelSheetWrp.PORName}" maxlength="80"/>
+            <apex:outputText rendered="{!outputView}" styleClass="slds-output" value="{!finalExcelSheetWrp.PORName}"/> 
+          </div> 
+        </div>  
+          
+        <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-3" style="padding-right: 0px;">
+          <label class="slds-form-element__label label" for="text-input-02">Template Name</label>
+          <div class="slds-form-element__control">  
+            <apex:inputHidden value="{!finalExcelSheetWrp.PORTemplateId}" id="PORTemplateId"/>
+              
+            <apex:outputPanel rendered="{!inputView}">
+                <input type="text" class="slds-input slds-combobox__input" id="tempSearch" value="{!finalExcelSheetWrp.PORTemplateName}" aria-autocomplete="list" aria-controls="listbox-id-1" autocomplete="off" role="textbox" placeholder="Search..." />
+            </apex:outputPanel>
+            
+            <apex:outputText rendered="{!outputView}" styleClass="slds-output" value="{!finalExcelSheetWrp.PORTemplateName}"/> 
+ 
+          </div>   
+        </div>  
+           
+        <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-3" style="padding-right: 0px;">
+          <label class="slds-form-element__label label" for="text-input-01">Part Number</label>
+          <div class="slds-form-element__control">
+            <apex:selectList styleClass="slds-input" value="{!finalExcelSheetWrp.PORPartNumber}" rendered="{!inputView}" size="1" multiselect="false" >
+                <apex:selectOptions value="{!PartNumbers}"/>
+            </apex:selectList>  
+            <apex:outputText rendered="{!outputView}" styleClass="slds-output" value="{!finalExcelSheetWrp.PORPartNumber}"/>
+          </div> 
+        </div> 
+            
+        <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-3" style="padding-right: 0px;">
+          <label class="slds-form-element__label label" for="text-input-02">Version</label>
+          <div class="slds-form-element__control">
+            <apex:inputText styleClass="slds-input" value="{!finalExcelSheetWrp.PORversion}" maxlength="80"  rendered="{!inputView}" />
+            <apex:outputText rendered="{!outputView}" styleClass="slds-output" value="{!finalExcelSheetWrp.PORversion}"/>
+          </div> 
+        </div>   
+        <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-3" style="padding-right: 0px;" >
+          <label class="slds-form-element__label label" for="text-input-02">Version Type</label>
+          <div class="slds-form-element__control"> 
+             <apex:selectList styleClass="slds-input" value="{!finalExcelSheetWrp.PORversionType}" rendered="{!inputView}" size="1" multiselect="false" >
+                <apex:selectOptions value="{!VersionType}"/>
+            </apex:selectList> 
+            <apex:outputText rendered="{!outputView}" styleClass="slds-output" value="{!finalExcelSheetWrp.PORversionType}"/>            
+          </div>            
+        </div>   
+        <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-3" style="padding-right: 0px;">
+          <label class="slds-form-element__label label" for="text-input-02">Description</label>
+          <div class="slds-form-element__control"> 
+            <apex:inputTextarea id="newDesc" value="{!finalExcelSheetWrp.PORDescription}" styleClass="slds-input" rendered="{!inputView}"/>
+            <apex:outputText rendered="{!outputView}" styleClass="slds-output" value="{!finalExcelSheetWrp.PORDescription}"/>            
+          </div>            
+        </div>  
+        </div> 
+
+    
+    <apex:outputPanel id="sheetAndTable">
+        <apex:outputPanel rendered="{!sheetPanel}">
+          <div style="background: rgb(221, 219, 218);text-shadow: none;color: rgb(62, 62, 60);padding: 0px;">
+             <div class="slds-grid slds-wrap slds-grid--pull-padded" id="searchForm" style="padding-top: 10px;padding-left: 15px;width: 100%;">
+              <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-4" style="padding-right: 0px;">
+                <label class="slds-form-element__label label" for="text-input-01">Start Year</label>
+                <div class="slds-form-element__control">
+                  <apex:inputText styleClass="slds-input" value="{!startYear}" maxlength="80"/>
+                </div> 
+              </div>  
+                   
+              <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-4" style="padding-right: 0px;">
+                <label class="slds-form-element__label label" for="text-input-02">Start Quarter</label>
+                <div class="slds-form-element__control">  
+                  <apex:selectList styleClass="slds-input" value="{!selQtr}" size="1" multiselect="false">
+                    <apex:selectOptions value="{!startQuarter}"/>
+                  </apex:selectList>   
+                </div>   
+              </div>
+                 
+              <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-4" style="padding-right: 0px;">
+                <label class="slds-form-element__label label" for="text-input-01">No of Quarter</label>
+                <div class="slds-form-element__control">
+                    <apex:selectList styleClass="slds-input" value="{!selNumOfQtr}" size="1" multiselect="false">
+                      <apex:selectOptions value="{!noofQuarter}"/>
+                    </apex:selectList> 
+                </div> 
+              </div> 
+              <div class="slds-form-element slds-p-horizontal--small slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-4" style="padding-right: 0px;">
+                <div class="slds-form-element__control slds-col slds-no-flex slds-grid slds-align-right slds-p-bottom_xx-small" style="margin-top: 25px;">  
+                  <apex:commandButton styleClass="slds-button slds-button_neutral" value="Go" action="{!searchExcelSheet}" status="status"/>
+                </div>   
+              </div>
+              
+            </div>
+          </div>
+        </apex:outputPanel>
+    </apex:outputPanel>
+
+    <div id="hot"></div>
+  
+</div>
+
+<script>
+    debugger;
+
+    var hot;
+
+
+    
+    
+    function codeAddress() {
+        var PORId  = '{!PORId}';
+        var viewType = '{!viewType}';
+        if(PORId !=''){
+            showExcelSheet(viewType);
+        }
+    }
+    window.onload = codeAddress;
+    
+    
+    function showExcelSheet(viewType){
+        var excelMap = JSON.parse('{!finalJSONOutput}');
+        var dataObject = excelMap.xlSttWrapList;
+        var hotElement = document.querySelector('#hot');
+        var hotElementContainer = hotElement.parentNode;
+        debugger;
+
+        var arrs = new Array();
+        var len = dataObject.length; 
+        for (var i = 0; i < len; i++) {
+          if(dataObject[i].entrytype == "Input"){
+
+           /* for (var j = 0; j < 12; j++) {
+
+              var qtr = dataObject[i].quarters["quarter"+j];
+              qtr = qtr.replace(/\"/g, "");
+
+            } */
+            var qtr1 = dataObject[i].quarters.quarter1;
+            qtr1 = qtr1.replace(/\"/g, "");
+            var qtr2 = dataObject[i].quarters.quarter2;
+            qtr2 = qtr2.replace(/\"/g, "");
+            var qtr3 = dataObject[i].quarters.quarter1;
+            qtr3 = qtr3.replace(/\"/g, "");
+            var qtr4 = dataObject[i].quarters.quarter1;
+            qtr4 = qtr4.replace(/\"/g, "");
+            var qtr5 = dataObject[i].quarters.quarter1;
+            qtr5 = qtr5.replace(/\"/g, "");
+            var qtr6 = dataObject[i].quarters.quarter1;
+            qtr6 = qtr6.replace(/\"/g, "");
+            var qtr7 = dataObject[i].quarters.quarter1;
+            qtr7 = qtr7.replace(/\"/g, "");
+            var qtr8 = dataObject[i].quarters.quarter1;
+            qtr8 = qtr8.replace(/\"/g, "");
+            var qtr9 = dataObject[i].quarters.quarter1;
+            qtr9 = qtr9.replace(/\"/g, "");
+            var qtr10 = dataObject[i].quarters.quarter1;
+            qtr10 = qtr10.replace(/\"/g, "");
+            var qtr11 = dataObject[i].quarters.quarter1;
+            qtr11 = qtr11.replace(/\"/g, "");
+            var qtr12 = dataObject[i].quarters.quarter1;
+            qtr12 = qtr12.replace(/\"/g, "");
+
+
+            arrs.push({'costtype':dataObject[i].costtype, 'quarter1':qtr1,'quarter2':qtr2,'quarter3':qtr3,'quarter4':qtr4,'quarter5':qtr5,'quarter6':qtr6,'quarter7':qtr7,'quarter8':qtr8,'quarter9':qtr9,'quarter10':qtr10,'quarter11':qtr11,'quarter12':qtr12});
+          }else{
+            arrs.push({'costtype':dataObject[i].costtype, 'quarter1':dataObject[i].quarters.quarter1,'quarter2':dataObject[i].quarters.quarter2,'quarter3':dataObject[i].quarters.quarter3,'quarter4':dataObject[i].quarters.quarter4,'quarter5':dataObject[i].quarters.quarter5,'quarter6':dataObject[i].quarters.quarter6,'quarter7':dataObject[i].quarters.quarter7,'quarter8':dataObject[i].quarters.quarter8,'quarter9':dataObject[i].quarters.quarter9,'quarter10':dataObject[i].quarters.quarter10,'quarter11':dataObject[i].quarters.quarter11,'quarter12':dataObject[i].quarters.quarter12});
+          }
+        }
+
+        var hotSettings = {
+          data: arrs,
+          columns: excelMap.xlSttcolDataType,
+          stretchH: 'all',
+          width: 1400,
+          autoWrapRow: true,
+          height: 700,
+          maxRows: 22,  
+          rowHeaders: true,
+          formulas: true,
+          colHeaders: excelMap.xlSttHrWrap,
+
+          columnSummary: [{
+            destinationColumn: 1,
+            destinationRow: 0,
+            type: 'sum',
+            forceNumeric: true,
+            suppressDataTypeErrors: true,
+            readOnly: true
+          }, {
+            destinationColumn: 4,
+            destinationRow: 0,
+            type: 'sum',
+            forceNumeric: true,
+            suppressDataTypeErrors: true,
+            readOnly: true
+          }]
+
+        };
+
+        hot = new Handsontable(hotElement, hotSettings);
+
+        hot.updateSettings({
+          cells: function(row, col) {
+            var cellProperties = {};
+
+            var frmFldLength = excelMap.xlStFormulaFld.length;
+
+            for(var i=0; i<frmFldLength; i++){
+              if (hot.getDataAtCell(hot.toVisualRow(row), 0) == excelMap.xlStFormulaFld[i]) {
+                  cellProperties.className = 'myClass';
+                  cellProperties.readOnly = true;
+              } 
+            }
+
+
+            return cellProperties;
+          },
+        })
+    }
+
+    $(function(){  
+      $("#tempSearch").autocomplete({  
+         minLength: 2,  
+         source: function(request, response){  
+            var searchString = request.term;  
+            ExcelSheet.getSearchSuggestions(searchString, function(result, event){  
+                 if(event.status){  
+                      if(typeof result === 'undefined' || result.length <=0){  
+                           response(['No Record Found']);  
+                      }else {  
+                            response(result);  
+                        }  
+                 }else {  
+                      response([]);  
+                 }  
+            },  
+            {escape: true}  
+            );  
+         },       
+         select: function(event, ui){  
+            if(ui.item.label != 'No Record Found'){  
+                $("#tempSearch").val(ui.item.label);  
+                document.getElementById("pageId:formId:PORTemplateId").value = ui.item.value;
+            }  
+            return false;  
+         },  
+         focus: function( event, ui ) {  
+            $("#tempSearch").val(ui.item.label);  
+            return false;  
+         }  
+     });  
+    });  
+
+</script>
+
+
+</apex:form>
+</body>
+</html>
+  
+</apex:page>
